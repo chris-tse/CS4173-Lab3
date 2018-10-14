@@ -3,8 +3,7 @@
 
 ## Prerequisites
 Versions of software used listed here:
-- Environment: Ubuntu 16.04.4 LTS
-- Environment for Task 1: Windows 10 Powershell
+- Environment: Ubuntu 16.04.4 LTS, Windows 10 Powershell
 - `diff`: 3.3
 - `md5sum`: 8.25
 
@@ -62,3 +61,50 @@ $ md5sum NT3.bin
 ```
 
 ## Task 3: Generating Two Executable Files with the Same MD5 Hash
+
+Note: I am again using the Windows binary to generate hash collision generating binaries. 
+
+In this task we will generate two executables that have the same MD5 hash using the properties we examined previously. First, we will put the given program into `program.c` and compile it into `program`:
+
+```bash
+$ make program.c
+cc     program.c   -o program
+```
+
+Inspecting this `program` binary, we can see that the first multiple of 64 bytes which starts in the array is at the `0x107F` position, or 4223rd byte. Therefore, we can use `head` to make our prefix to generate our two binaries with colliding hashes:
+
+```bash
+$ head -c 4224 program > prefix.bin
+$ ./md5collgen -p prefix.bin -o P.bin Q.bin
+```
+
+Inspecting these outputs, we can see that they end at the `0x1100` position, or 4352nd byte, so we can start from there for our suffix then build our final executables:
+
+```bash
+$ tail -c +4352 program > suffix.bin
+$ cat ../P.bin suffix.bin > out1.bin
+$ cat ../Q.bin suffix.bin > out2.bin
+$ ./out1.bin
+4141414141414141414141414141414141414141414141414141414141414141e7b07c4ffc1614b1cd4e89a58bdbf1ebc0c6b7ab3bb8e03be4683428c7d2cefe1ebfc4486d46e2ebff4f3b40ea882df79b264cb48ee65c61ce6966e973b9dda4862bb7983a22a96ed2013256b99cc37716b167f881c16c59df6cc7781aded6fb66f1fb48125d644c9699c7c451f1f164f39dc85389c19bc7f924ea9c241414141414141414141414141414141414141414141414141414141414141414141414141414141
+$ ./out2.bin
+4141414141414141414141414141414141414141414141414141414141414141e7b07c4ffc1614b1cd4e89a58bdbf1ebc0c6b72b3bb8e03be4683428c7d2cefe1ebfc4486d46e2ebff4f3b406a892df79b264cb48ee65c61ce69e6e973b9dda4862bb7983a22a96ed2013256b99cc37716b967f881c16c59df6cc7781aded6fb66f1fb48125d644c9699cfc441f1f164f39dc85389c19bc77924ea9c241414141414141414141414141414141414141414141414141414141414141414141414141414141
+```
+
+We verify that the resulting binaries that are pieced together indeed are able to be executed and we can verify that the contents are different if we save the outputs and run a `diff` on them. 
+
+```bash
+$ ./out1.bin > 1
+$ ./out2.bin > 2
+$ diff 1 2
+```
+
+Since our outputs are on single lines it can be hard to determine the location of the differences from the output, but `diff` indeed confirms they are different. We can still observe the sequence of `0x41` in the prefix and suffix which tells us that we successfully pieced the binaries together. Finally, we can test whether the MD5 hashes are the same:
+
+```bash
+$ md5sum out1.bin
+535713123dd6aa0d44e6c2214332fe3b  out1.bin
+$ md5sum out2.bin
+535713123dd6aa0d44e6c2214332fe3b  out2.bin
+```
+
+We can see that they are indeed the same, meaning that the property we examined in the previous task holds true. 
