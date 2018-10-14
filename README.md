@@ -6,15 +6,25 @@ Versions of software used listed here:
 - Environment: Ubuntu 16.04.4 LTS, Windows 10 Powershell
 - `diff`: 3.3
 - `md5sum`: 8.25
+- `gcc`: 5.4.0
+- `make`: 4.1
+
+**Note**: Since I am not able to use the Linux version of the collision tool (executable cannot be run on the architecture of my VM) I used the Windows binary version through Powershell for generating the outputs.
 
 ## Task 1: Generate Encryption Key in a Wrong Way
 
-In this task, we use the provided tool to generate two binary files which result in the same hash when using the MD5 hashing algorithm. Since I am not able to use the collision tool I used the Windows binary version through Powershell for generating the outputs. By observing the output, we can see that the prefix is appended to the output binary as a 64 length block. There are 3 prefix files included: `63longprefex.txt`, `64longprefex.txt`, and `65longprefex.txt`. These were used to test the outputs when the prefix is a multiple of 64, less than a multiple of 64, or greater than a multiple of 64. 
+In this task, we use the provided tool to generate two binary files which result in the same hash when using the MD5 hashing algorithm. By observing the output, we can see that the prefix is appended to the output binary as a 64 length block. There are 3 prefix files included: `63longprefix.txt`, `64longprefix.txt`, and `65longprefix.txt`. These were used to test the outputs when the prefix is a multiple of 64, less than a multiple of 64, or greater than a multiple of 64. 
 
 ### Question 1
 If the length of the prefix is a multiple of 64, it will fit perfectly at the start of the output. Otherwise, if it is shorter than 64, the prefix will be padded with hex `00`s until it is. If it is longer than a multiple of 64, a new 64 length block will be used, made up of the remainder of the prefix and padded with hex `00`s. 
 
 ### Question 2
+Generating collisions using the 64 byte prefix:
+
+```bash
+$ ./md5collgen -p 64longprefix.txt -o out1.bin out2.bin
+```
+
 Using the `64longprefex.txt` file as the prefix, we see in the output that the hash contents begin immediately after the last byte of the prefix.
 
 ### Question 3
@@ -62,8 +72,6 @@ $ md5sum NT3.bin
 
 ## Task 3: Generating Two Executable Files with the Same MD5 Hash
 
-Note: I am again using the Windows binary to generate hash collision generating binaries. 
-
 In this task we will generate two executables that have the same MD5 hash using the properties we examined previously. First, we will put the given program into `program.c` and compile it into `program`:
 
 ```bash
@@ -82,8 +90,8 @@ Inspecting these outputs, we can see that they end at the `0x1100` position, or 
 
 ```bash
 $ tail -c +4352 program > suffix.bin
-$ cat ../P.bin suffix.bin > out1.bin
-$ cat ../Q.bin suffix.bin > out2.bin
+$ cat P.bin suffix.bin > out1.bin
+$ cat Q.bin suffix.bin > out2.bin
 $ ./out1.bin
 4141414141414141414141414141414141414141414141414141414141414141e7b07c4ffc1614b1cd4e89a58bdbf1ebc0c6b7ab3bb8e03be4683428c7d2cefe1ebfc4486d46e2ebff4f3b40ea882df79b264cb48ee65c61ce6966e973b9dda4862bb7983a22a96ed2013256b99cc37716b167f881c16c59df6cc7781aded6fb66f1fb48125d644c9699c7c451f1f164f39dc85389c19bc7f924ea9c241414141414141414141414141414141414141414141414141414141414141414141414141414141
 $ ./out2.bin
@@ -96,6 +104,8 @@ We verify that the resulting binaries that are pieced together indeed are able t
 $ ./out1.bin > 1
 $ ./out2.bin > 2
 $ diff 1 2
+1c1
+< 4141414141414141414141414...
 ```
 
 Since our outputs are on single lines it can be hard to determine the location of the differences from the output, but `diff` indeed confirms they are different. We can still observe the sequence of `0x41` in the prefix and suffix which tells us that we successfully pieced the binaries together. Finally, we can test whether the MD5 hashes are the same:
